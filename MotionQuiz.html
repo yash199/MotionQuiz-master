@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Webcam Motion Detection(Three.js)</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+<video id="monitor" autoplay style="display:none; width: 320px; height: 240px;"></video>
+<div id="canvasLayer"   style="position: relative; width:240px; height:240px; float:left">
+</div>
+<div id="canvasLayers"   style="position: relative; width:320px; height:240px; float:left">
+<canvas id="videoCanvas" width="320" height="240" style="z-index: 1; position: absolute; left:0px; top:0px; opacity:1;"></canvas>
+<canvas id="layer2"     width="320" height="240" style="z-index: 2; position: absolute; left:0px; top:0px; opacity:0.5;"></canvas>
+<canvas id="score" width="100" height="240" style="z-index: 1; position: relative; left:0px; top:0px; opacity:0.5;" ></canvas>
+
+
+
+</div>
+<canvas id="blendCanvas" style="display: none; position: relative; left: 320px; top: 240px; width: 320px; height: 240px;"></canvas>
+
+<div id="messageError"></div>
+<div id="messageArea" style="position: relative; left: 0px; top: 270px;"></div>
+<div id="container" style="z-index: 2; position: absolute; left:0px; top:0px"></div>
+<div style="position: absolute; left:100px; top:100px">
+
+<canvas id="myCanvas" width="578" height="260"></canvas>
+    <script>
+		  var score=0;
+	  function change_color(haha)
+	  {
+      var canvas = document.getElementById('myCanvas');
+      var context = canvas.getContext('2d');
+
+      context.beginPath();
+	 // context.fillRect(40,40,100,100);
+      context.rect(145, 150, 290, 100);
+      context.fillStyle = haha;
+      context.fill();
+      context.lineWidth = 7;
+      context.strokeStyle = 'black';
+      context.stroke();
+	 }  
+	 function pausecomp(millis)
+ 		{
+  var date = new Date();
+  var curDate = null;
+  do { curDate = new Date(); }
+  while(curDate-date < millis);
+	}
+	 //change_color('red');
+	</script>
+
+<p style="background-color:#C3A4FF; margin-left: auto;
+    margin-right: auto;
+    width: 40em">
+<font size="5">Score: <span id="scorecard" ></span><br /> 
+Question: <span id="question"></span><br /> 
+<font color="red">(1) <span id="op1"></font></span><br />
+<font color="green">(2) <span id="op2"></font></span><br /> 
+<font color="yellow">(3) <span id="op3"></font></span><br /> 
+<font color="blue">(4) <span id="op4"></font></font></span><br />
+</p>
+</div>
+<script>
+
+var ques = new Array();
+	ques[0]= "Who among these is the founder of Facebook?";
+	ques[1]= "How many states are in the United States?";
+	ques[2]= "Who is the current president of India?";
+	ques[3]= "What is the name of latest version of Android?";
+	ques[4]= "Which of these platforms natively support WebGL?";
+	ques[5]= "All questions answered!!";
+var ans = new Array(5);
+  for (var i = 0; i < 5; i++) 
+  {
+    ans[i] = new Array(5);
+  }
+  ans[0][0]=" Mark";
+  ans[0][1]=" Steve";
+  ans[0][2]=" Bill";
+  ans[0][3]=" Larry";
+  ans[0][4]="red";
+  
+  ans[1][0]=" 5";
+  ans[1][1]=" 28";
+  ans[1][2]=" 50";
+  ans[1][3]=" 150";
+  ans[1][4]="yellow";
+  
+  
+  ans[2][0]=" Manmohan Singh";
+  ans[2][1]=" Pranab Mukherjee";
+  ans[2][2]=" Dr. APJ Abdul Kalam";
+  ans[2][3]=" Pratibha Patil";
+  ans[2][4]="green";
+  
+  
+  ans[3][0]=" Dairy Milk";
+  ans[3][1]=" Perk";
+  ans[3][2]=" Kitkat";
+  ans[3][3]=" Kaaju Katli";
+  ans[3][4]="yellow";
+  
+  
+  ans[4][0]=" Android";
+  ans[4][1]=" Blackberry";
+  ans[4][2]=" Windows Phone";
+  ans[4][3]=" iOS";
+  ans[4][4]="green";
+
+  //var element=document.getElementById("mydiv");
+//	  element.innerHTML="New Header";
+ </script>
+
+
+<script>
+		var count=0;
+		function next()
+		{
+		document.getElementById("question").innerHTML=ques[count];	
+		document.getElementById("scorecard").innerHTML=score;
+		if(count<5)
+		{	
+		document.getElementById("op1").innerHTML=ans[count][0];
+		document.getElementById("op2").innerHTML=ans[count][1];
+		document.getElementById("op3").innerHTML=ans[count][2];
+		document.getElementById("op4").innerHTML=ans[count][3];
+		}
+		else
+		{
+			document.getElementById("op1").innerHTML="<br>";
+			document.getElementById("op2").innerHTML="<br>";
+			document.getElementById("op3").innerHTML="<br>";
+			document.getElementById("op4").innerHTML="<br>";	
+		}
+		};
+		
+</script>
+
+
+
+
+<script>
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+window.URL = window.URL || window.webkitURL;
+
+var camvideo = document.getElementById('monitor');
+
+	if (!navigator.getUserMedia) 
+	{
+		document.getElementById('messageError').innerHTML = 
+			'Sorry. <code>navigator.getUserMedia()</code> is not available.';
+	}
+	navigator.getUserMedia({video: true}, gotStream, noStream);
+
+function gotStream(stream) 
+{
+	if (window.URL) 
+	{   camvideo.src = window.URL.createObjectURL(stream);   } 
+	else // Opera
+	{   camvideo.src = stream;   }
+
+	camvideo.onerror = function(e) 
+	{   stream.stop();   };
+
+	stream.onended = noStream;
+}
+
+function noStream(e) 
+{
+	var msg = 'No camera available.';
+	if (e.code == 1) 
+	{   msg = 'User denied access to use camera.';   }
+	document.getElementById('errorMessage').textContent = msg;
+}
+</script>
+
+
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<!-- jQuery code to display an information button and box when clicked. -->
+<script src="js/jquery-1.9.1.js"></script>
+<script src="js/jquery-ui.js"></script>
+<link rel=stylesheet href="css/jquery-ui.css" />
+<link rel=stylesheet href="css/info.css"/>
+<script src="js/info.js"></script>
+<div id="infoButton"></div>
+<div id="infoBox" title="How to use?">
+Select the color which you think is correct and than select done.
+</div>
+<!-- ------------------------------------------------------------ -->
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+next();
+var prev,curr;
+prev ="red";
+curr ="red";
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls, stats;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+// custom global variables
+var cube;
+
+
+	// assign global variables to HTML elements
+	var video = document.getElementById( 'monitor' );
+	var videoCanvas = document.getElementById( 'videoCanvas' );
+	var videoContext = videoCanvas.getContext( '2d' );
+	
+	var layer2Canvas = document.getElementById( 'layer2' );
+	var layer2Context = layer2Canvas.getContext( '2d' );
+	
+	var blendCanvas  = document.getElementById( "blendCanvas" );
+	var blendContext = blendCanvas.getContext('2d');
+		
+	var messageArea = document.getElementById( "messageArea" );
+
+var buttons;
+var lastImageData;
+
+
+init();
+animate();
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,150,400);
+	camera.lookAt(scene.position);	
+	// RENDERER
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	// STATS
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.bottom = '0px';
+	stats.domElement.style.zIndex = 100;
+	container.appendChild( stats.domElement );
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(-100,250,100);
+	scene.add(light);
+	// FLOOR
+	//var floorTexture = new THREE.ImageUtils.loadTexture( 'images/SquareRed.png' );
+	
+	// SKYBOX/FOG
+//	scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+//	floorMaterial.map = floorTexture2;
+		
+	////////////
+	// CUSTOM //
+	////////////
+	this.colorRed = THREE.ImageUtils.loadTexture( "images/SquareRed.png" );
+	this.colorGreen = THREE.ImageUtils.loadTexture( "images/SquareGreen.jpg" );
+	this.colorYellow = THREE.ImageUtils.loadTexture( "images/SquareYellow.jpg" );
+	this.colorBlue = THREE.ImageUtils.loadTexture( "images/SquareBlue.jpg" );
+	this.question = THREE.ImageUtils.loadTexture( "images/Question.jpg" );
+	this.correct = THREE.ImageUtils.loadTexture( "images/correct.jpg" );
+	this.wrong = THREE.ImageUtils.loadTexture( "images/wrong.png" );
+	
+	
+	var cubeGeometry = new THREE.CubeGeometry( 25, 25, 25 );
+	this.cubeMaterial = new THREE.MeshLambertMaterial( { color: 0xffffff, map: correct, emissive: 0x333333 } );
+	cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
+	cube.position.set(-1,90,0);	
+	scene.add(cube);
+	
+	
+	
+	
+	//cube.rotation.set(Math.PI / 4, 0, 0);
+	
+	
+	
+	
+	
+	// VIDEO SET UP
+	
+	// these changes are permanent
+	videoContext.translate(300, 0);
+	videoContext.scale(-1, 1);
+		
+	// background color if no video present
+	videoContext.fillStyle = '#005337';
+	videoContext.fillRect( 0, 0, videoCanvas.width, videoCanvas.height );				
+
+	buttons = [];
+	
+	var button0 = new Image();
+	button0.src ="images/SquareRed.png";
+	var buttonData0 = { name:"red", image:button0, x:300 - 96 -100 -90, y:10, w:32, h:32 };
+	buttons.push( buttonData0 );
+	
+	var button1 = new Image();
+	button1.src ="images/SquareGreen.jpg";
+	var buttonData1 = { name:"green", image:button1, x:300 - 96 - 60 -70, y:10, w:32, h:32 };
+	buttons.push( buttonData1 );
+	
+	var button2 = new Image();
+	button2.src ="images/SquareYellow.jpg";
+	var buttonData2 = { name:"yellow", image:button2, x:300 - 64 - 50 -50, y:10, w:32, h:32 };
+	buttons.push( buttonData2 );
+	
+	var button3 = new Image();
+	button3.src ="images/SquareBlue.jpg";
+	var buttonData3 = { name:"blue", image:button3, x:300 - 32 - 40 -30, y:10, w:32, h:32 };
+	buttons.push( buttonData3 );
+
+	var button4 = new Image();
+	button4.src ="images/Done.jpg";
+	var buttonData4 = { name:"done", image:button4, x:300 - 16 - 15 -10, y:10, w:32, h:32 };
+	buttons.push( buttonData4 );
+	
+		
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{
+	if ( keyboard.pressed("z") ) 
+	{ 
+		// do something
+	}
+	
+	controls.update();
+	stats.update();
+	blend();	
+	checkAreas();
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+	var delta = clock.getDelta();
+	cube.rotation.y += delta;
+	
+	if ( video.readyState === video.HAVE_ENOUGH_DATA ) 
+	{
+		// mirror video
+		videoContext.drawImage( video, 0, 0, videoCanvas.width, videoCanvas.height );
+		for ( var i = 0; i < buttons.length; i++ )
+			layer2Context.drawImage( buttons[i].image, buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h );		
+	}
+	
+}
+
+function blend() 
+{
+	var width  = videoCanvas.width;
+	var height = videoCanvas.height;
+	// get current webcam image data
+	var sourceData = videoContext.getImageData(0, 0, width, height);
+	// create an image if the previous image doesn’t exist
+	if (!lastImageData) lastImageData = videoContext.getImageData(0, 0, width, height);
+	// create a ImageData instance to receive the blended result
+	var blendedData = videoContext.createImageData(width, height);
+	// blend the 2 images
+	differenceAccuracy(blendedData.data, sourceData.data, lastImageData.data);
+	// draw the result in a canvas
+	blendContext.putImageData(blendedData, 0, 0);
+	// store the current webcam image
+	lastImageData = sourceData;
+}
+function differenceAccuracy(target, data1, data2) 
+{
+	if (data1.length != data2.length) return null;
+	var i = 0;
+	while (i < (data1.length * 0.25)) 
+	{
+		var average1 = (data1[4*i] + data1[4*i+1] + data1[4*i+2]) / 3;
+		var average2 = (data2[4*i] + data2[4*i+1] + data2[4*i+2]) / 3;
+		var diff = threshold(fastAbs(average1 - average2));
+		target[4*i]   = diff;
+		target[4*i+1] = diff;
+		target[4*i+2] = diff;
+		target[4*i+3] = 0xFF;
+		++i;
+	}
+}
+function fastAbs(value) 
+{
+	return (value ^ (value >> 31)) - (value >> 31);
+}
+function threshold(value) 
+{
+	return (value > 0x15) ? 0xFF : 0;
+}
+
+// check if white region from blend overlaps area of interest (e.g. triggers)
+function checkAreas() 
+{
+	for (var b = 0; b < buttons.length; b++)
+	{
+		// get the pixels in a note area from the blended image
+		var blendedData = blendContext.getImageData( buttons[b].x, buttons[b].y, buttons[b].w, buttons[b].h );
+			
+		// calculate the average lightness of the blended data
+		var i = 0;
+		var sum = 0;
+		var countPixels = blendedData.data.length * 0.25;
+		while (i < countPixels) 
+		{
+			sum += (blendedData.data[i*4] + blendedData.data[i*4+1] + blendedData.data[i*4+2]);
+			++i;
+		}
+		// calculate an average between of the color values of the note area [0-255]
+		var average = Math.round(sum / (3 * countPixels));
+		if (average > 40) // more than 20% movement detected
+		{
+			document.getElementById("scorecard").innerHTML=score;
+			console.log( "Button " + buttons[b].name + " triggered." ); // do stuff
+			if (buttons[b].name == "red")
+			{
+				prev=curr;
+				curr= "red";
+				//change_color("red");
+	
+	//			context.fillStyle = 'red';
+				cubeMaterial.map = colorRed;
+	//			floorMaterial.map = floorTexture1;
+			}
+			if (buttons[b].name == "green")
+			{			
+			
+				prev=curr;
+				curr= "green";
+				//change_color("green");
+	
+	//			context.fillStyle = 'green';
+			cubeMaterial.map = colorGreen;
+			
+	//		floorMaterial.map = floorTexture2;
+			//floorMaterial.map = colorGreen;
+			}			
+			if (buttons[b].name == "yellow")
+			{
+			
+				prev=curr;
+				curr= "yellow";
+				//change_color("yellow");
+	
+	//			context.fillStyle = 'yellow';
+				cubeMaterial.map = colorYellow;
+	//			floorMaterial.map = floorTexture3;
+
+			}
+			if (buttons[b].name == "blue")
+			{
+			
+				prev=curr;
+				curr= "blue";
+				//change_color("blue");
+	
+//				context.fillStyle = 'blue';
+			cubeMaterial.map = colorBlue;
+	//		floorMaterial.map = floorTexture4;
+			}			
+			if (buttons[b].name == "done")
+			{
+				prev=curr;
+				curr= "done";
+				curr=prev;
+				
+				if (ans[count][4] == prev)
+				{
+					cubeMaterial.map = correct;
+	//				floorMaterial.map = correct;
+					score=score+10;
+					count++;
+					pausecomp(1000);	
+					if(count<6)
+					{	
+						next();
+						
+					}
+				}
+				else
+				{
+					
+					cubeMaterial.map = wrong;
+					pausecomp(1000);
+					//count++;
+					score=score-5;
+					//if(count<5)
+					//	next();
+		//			floorMaterial.map = wrong;
+				}
+			}
+			// messageArea.innerHTML = "Button " + buttons[b].name + " triggered.";
+		}
+				
+		// console.log("Button " + b + " average " + average);
+	}
+}
+
+</script>
+
+</body>
+</html>
